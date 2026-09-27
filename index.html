@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sundial — Daily Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4EFE4;
+    --surface:#FFFDF7;
+    --ink:#3A362E;
+    --ink-soft:#847D6E;
+    --ink-faint:#B3AB98;
+    --sage:#78876A;
+    --sage-soft:#E4E9DA;
+    --sage-dark:#586849;
+    --clay:#C4785A;
+    --clay-soft:#F2E0D5;
+    --gold:#E8A33D;
+    --gold-soft:#FBEBD2;
+    --line:#E5DECD;
+    --radius:16px;
+    --shadow:0 1px 2px rgba(58,54,46,0.04), 0 8px 24px -10px rgba(58,54,46,0.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(900px 500px at 85% -8%, rgba(232,163,61,0.08), transparent),
+      radial-gradient(700px 400px at 0% 100%, rgba(120,135,106,0.06), transparent),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter', -apple-system, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:48px 20px 80px;
+  }
+  .app{ width:100%; max-width:600px; }
+
+  /* ---- Header ---- */
+  .eyebrow{
+    font-size:12px; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--sage-dark); font-weight:600; margin:0 0 6px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{ content:"☀"; font-size:13px; }
+  h1{
+    font-family:'Lora', serif; font-weight:600; font-style:italic;
+    font-size:30px; margin:0 0 4px; letter-spacing:-0.01em; color:var(--ink);
+  }
+  .sub{ color:var(--ink-soft); font-size:14.5px; margin:0 0 22px; }
+
+  /* ---- Week strip ---- */
+  .week-strip{
+    display:flex; gap:6px; margin-bottom:22px;
+  }
+  .day-pill{
+    flex:1; text-align:center; padding:10px 4px 8px;
+    border-radius:12px; cursor:pointer; user-select:none;
+    background:var(--surface); border:1px solid var(--line);
+    transition:background .15s, border-color .15s, transform .1s;
+  }
+  .day-pill:hover{ transform:translateY(-1px); }
+  .day-pill .dow{ font-size:10.5px; color:var(--ink-faint); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+  .day-pill .dom{ font-family:'Lora', serif; font-size:16px; margin-top:2px; color:var(--ink); }
+  .day-pill .dot{ width:4px; height:4px; border-radius:50%; background:var(--clay); margin:5px auto 0; opacity:0; }
+  .day-pill.has-tasks .dot{ opacity:1; }
+  .day-pill.selected{ background:var(--sage); border-color:var(--sage); }
+  .day-pill.selected .dow, .day-pill.selected .dom{ color:#fff; }
+  .day-pill.selected .dot{ background:#fff; }
+  .day-pill.is-today:not(.selected){ border-color:var(--gold); }
+
+  /* ---- Up Next banner ---- */
+  .up-next{
+    background:linear-gradient(135deg, var(--gold-soft), var(--surface));
+    border:1px solid #EED9AE;
+    border-radius:var(--radius);
+    padding:16px 18px;
+    display:flex; align-items:center; gap:14px;
+    margin-bottom:26px;
+    box-shadow:var(--shadow);
+  }
+  .up-next .glow-dot{
+    width:11px; height:11px; border-radius:50%;
+    background:var(--gold);
+    box-shadow:0 0 0 5px rgba(232,163,61,0.22);
+    flex-shrink:0;
+    animation:pulse 2.6s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ box-shadow:0 0 0 5px rgba(232,163,61,0.22); }
+    50%{ box-shadow:0 0 0 8px rgba(232,163,61,0.10); }
+  }
+  .up-next-text .label{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#A6791E; font-weight:700; }
+  .up-next-text .title{ font-family:'Lora', serif; font-size:16.5px; margin-top:2px; color:var(--ink); }
+  .up-next-text .time{ font-size:12.5px; color:var(--ink-soft); margin-top:1px; }
+
+  /* ---- Add task card ---- */
+  .add-card{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:16px; margin-bottom:28px;
+  }
+  .add-card h2{
+    font-family:'Lora', serif; font-weight:600; font-size:16px; margin:0 0 12px; color:var(--ink);
+  }
+  .field-row{ display:flex; gap:10px; margin-bottom:12px; }
+  .field-row input[type="text"]{
+    flex:1; font-family:'Inter'; font-size:14.5px;
+    border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    background:var(--bg); outline:none; color:var(--ink);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .field-row input[type="text"]:focus{ border-color:var(--sage); box-shadow:0 0 0 3px var(--sage-soft); }
+  .field-row input[type="time"]{
+    font-family:'Inter'; font-size:14px; border:1px solid var(--line);
+    border-radius:10px; padding:10px 10px; background:var(--bg); color:var(--ink); outline:none;
+  }
+  .field-row input[type="time"]:focus{ border-color:var(--sage); }
+
+  .slider-block{ margin-bottom:14px; }
+  .slider-label{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:12.5px; color:var(--ink-soft); margin-bottom:6px; font-weight:500;
+  }
+  .slider-label strong{ color:var(--ink); font-weight:600; }
+
+  input[type="range"]{
+    -webkit-appearance:none; appearance:none; width:100%; height:6px;
+    border-radius:100px; background:var(--line); outline:none; cursor:pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+    background:var(--surface); border:3px solid var(--sage); cursor:pointer;
+    box-shadow:0 1px 3px rgba(0,0,0,0.15);
+    transition:transform .1s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover{ transform:scale(1.1); }
+  input[type="range"]::-moz-range-thumb{
+    width:18px; height:18px; border-radius:50%;
+    background:var(--surface); border:3px solid var(--sage); cursor:pointer;
+  }
+  #energySlider::-webkit-slider-thumb{ border-color:var(--clay); }
+  #energySlider::-moz-range-thumb{ border-color:var(--clay); }
+
+  .cat-row{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .cat-btn{
+    font-size:12.5px; font-weight:600; padding:7px 13px; border-radius:100px;
+    border:1px solid var(--line); background:var(--bg); color:var(--ink-soft);
+    cursor:pointer; transition:all .15s;
+  }
+  .cat-btn.active[data-cat="Focus"]{ background:var(--sage); border-color:var(--sage); color:#fff; }
+  .cat-btn.active[data-cat="Admin"]{ background:#7C8FA6; border-color:#7C8FA6; color:#fff; }
+  .cat-btn.active[data-cat="Rest"]{ background:var(--clay); border-color:var(--clay); color:#fff; }
+  .cat-btn.active[data-cat="Move"]{ background:var(--gold); border-color:var(--gold); color:#fff; }
+
+  .btn-primary{
+    width:100%; background:var(--sage); color:#fff; border:none;
+    border-radius:11px; padding:12px; font-size:14.5px; font-weight:600;
+    cursor:pointer; transition:background .15s, transform .1s;
+    font-family:'Inter';
+  }
+  .btn-primary:hover{ background:var(--sage-dark); }
+  .btn-primary:active{ transform:scale(0.98); }
+
+  /* ---- Timeline ---- */
+  .timeline-wrap{ position:relative; }
+  .section-title{
+    font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink-faint); margin:0 0 14px 2px;
+  }
+  .timeline{
+    position:relative;
+    border-left:2px solid var(--line);
+    margin-left:52px;
+    padding:4px 0 4px 22px;
+  }
+  .hour-row{ position:relative; min-height:64px; }
+  .hour-label{
+    position:absolute; left:-74px; top:-6px; width:56px; text-align:right;
+    font-size:11.5px; color:var(--ink-faint); font-weight:500;
+  }
+  .hour-row::before{
+    content:""; position:absolute; left:-24px; top:0; width:6px; height:1px; background:var(--line);
+  }
+
+  .now-line{
+    position:absolute; left:-24px; right:0; height:2px;
+    background:linear-gradient(90deg, var(--gold), rgba(232,163,61,0));
+    z-index:5;
+  }
+  .now-line::before{
+    content:""; position:absolute; left:-5px; top:-4px; width:10px; height:10px;
+    border-radius:50%; background:var(--gold); box-shadow:0 0 10px 2px rgba(232,163,61,0.55);
+  }
+  .now-line .now-time{
+    position:absolute; left:14px; top:-9px; font-size:10.5px; font-weight:700; color:var(--gold-soft);
+    background:var(--gold); padding:1px 6px; border-radius:100px; white-space:nowrap;
+  }
+
+  .block{
+    position:absolute; left:0; right:0;
+    background:var(--surface); border:1px solid var(--line); border-left:4px solid var(--sage);
+    border-radius:10px; padding:9px 12px; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:4px; overflow:hidden;
+    animation:rise .25s ease;
+  }
+  @keyframes rise{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+  .block.cat-Admin{ border-left-color:#7C8FA6; }
+  .block.cat-Rest{ border-left-color:var(--clay); }
+  .block.cat-Move{ border-left-color:var(--gold); }
+  .block.done{ opacity:0.55; }
+  .block.done .block-title{ text-decoration:line-through; }
+
+  .block-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+  .block-title{ font-size:13.5px; font-weight:600; color:var(--ink); line-height:1.3; }
+  .block-time{ font-size:11px; color:var(--ink-soft); flex-shrink:0; }
+  .block-actions{ display:flex; gap:4px; margin-left:auto; }
+  .mini-btn{
+    width:22px; height:22px; border:none; background:transparent; border-radius:6px;
+    color:var(--ink-faint); cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:background .15s, color .15s; flex-shrink:0;
+  }
+  .mini-btn:hover{ background:var(--bg); color:var(--ink); }
+  .mini-btn.check:hover{ color:var(--sage); }
+  .mini-btn.del:hover{ color:var(--clay); }
+  .energy-dots{ display:flex; gap:3px; margin-top:1px; }
+  .energy-dots span{ width:5px; height:5px; border-radius:50%; background:var(--line); }
+  .energy-dots span.filled{ background:var(--clay); }
+
+  .empty-timeline{
+    margin-left:52px; padding:32px 20px; text-align:center; color:var(--ink-soft);
+    background:var(--surface); border:1px dashed var(--line); border-radius:var(--radius);
+  }
+  .empty-timeline .glyph{ font-family:'Lora', serif; font-style:italic; font-size:20px; color:var(--ink-faint); }
+
+  /* ---- Mood check-in ---- */
+  .mood-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:18px; margin-top:32px;
+  }
+  .mood-card h2{ font-family:'Lora', serif; font-weight:600; font-size:16px; margin:0 0 4px; }
+  .mood-card .hint{ font-size:13px; color:var(--ink-soft); margin:0 0 14px; }
+  .mood-emoji{ text-align:center; font-size:30px; margin-bottom:8px; transition:transform .15s; }
+  .mood-scale-labels{ display:flex; justify-content:space-between; font-size:11px; color:var(--ink-faint); margin-top:6px; }
+
+  @media (max-width:520px){
+    .timeline{ margin-left:44px; padding-left:16px; }
+    .hour-label{ left:-56px; width:44px; font-size:10.5px; }
+    .field-row{ flex-direction:column; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <p class="eyebrow">Sundial</p>
+    <h1 id="greeting">Let's plan a good day.</h1>
+    <p class="sub" id="dateLine"></p>
+  </header>
+
+  <div class="week-strip" id="weekStrip"></div>
+
+  <div class="up-next" id="upNext" style="display:none;">
+    <div class="glow-dot"></div>
+    <div class="up-next-text">
+      <div class="label" id="upNextLabel">Up next</div>
+      <div class="title" id="upNextTitle">—</div>
+      <div class="time" id="upNextTime"></div>
+    </div>
+  </div>
+
+  <div class="add-card">
+    <h2>Add to your day</h2>
+    <div class="field-row">
+      <input type="text" id="taskTitle" placeholder="What's the plan?" maxlength="80">
+      <input type="time" id="taskStart">
+    </div>
+    <div class="cat-row" id="catRow">
+      <button class="cat-btn active" data-cat="Focus">Focus</button>
+      <button class="cat-btn" data-cat="Admin">Admin</button>
+      <button class="cat-btn" data-cat="Rest">Rest</button>
+      <button class="cat-btn" data-cat="Move">Move</button>
+    </div>
+    <div class="slider-block">
+      <div class="slider-label"><span>Duration</span><strong id="durationOut">30 min</strong></div>
+      <input type="range" id="durationSlider" min="15" max="180" step="15" value="30">
+    </div>
+    <div class="slider-block">
+      <div class="slider-label"><span>Energy needed</span><strong id="energyOut">Medium</strong></div>
+      <input type="range" id="energySlider" min="1" max="5" step="1" value="3">
+    </div>
+    <button class="btn-primary" id="addBtn">Add to schedule</button>
+  </div>
+
+  <div class="timeline-wrap">
+    <p class="section-title">Today's flow</p>
+    <div id="timelineHost"></div>
+  </div>
+
+  <div class="mood-card">
+    <h2>How's today going?</h2>
+    <p class="hint">A quick, honest check-in — no pressure.</p>
+    <div class="mood-emoji" id="moodEmoji">😌</div>
+    <input type="range" id="moodSlider" min="1" max="5" step="1" value="3">
+    <div class="mood-scale-labels">
+      <span>Rough</span><span>Steady</span><span>Great</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const DAY_START = 6;   // 6am
+  const DAY_END = 23;    // 11pm
+  const totalMinutes = (DAY_END - DAY_START) * 60;
+  const PX_PER_MIN = 1.05; // controls timeline visual density
+
+  function pad(n){ return n.toString().padStart(2,'0'); }
+  function dateKey(d){ return d.toISOString().slice(0,10); }
+  function timeToMinutes(t){ const [h,m] = t.split(':').map(Number); return h*60+m; }
+  function minutesToLabel(mins){
+    let h = Math.floor(mins/60), m = mins%60;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12; if(h12===0) h12=12;
+    return `${h12}:${pad(m)} ${ampm}`;
+  }
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  let selectedDate = new Date(today);
+
+  // in-memory store: { 'YYYY-MM-DD': [ {id,title,cat,start,duration,energy,done} ] }
+  const store = {};
+  const tKey = dateKey(today);
+  store[tKey] = [
+    { id:id(), title:'Morning pages + coffee', cat:'Rest', start:'07:00', duration:30, energy:1, done:true },
+    { id:id(), title:'Deep work: project draft', cat:'Focus', start:'09:00', duration:120, energy:5, done:false },
+    { id:id(), title:'Inbox + quick replies', cat:'Admin', start:'11:30', duration:30, energy:2, done:false },
+    { id:id(), title:'Walk around the block', cat:'Move', start:'13:00', duration:30, energy:2, done:false },
+    { id:id(), title:'Client call', cat:'Admin', start:'15:00', duration:45, energy:3, done:false },
+    { id:id(), title:'Wind down, read', cat:'Rest', start:'20:30', duration:45, energy:1, done:false },
+  ];
+
+  function id(){ return 'id-' + Math.random().toString(36).slice(2,9) + Date.now().toString(36); }
+
+  // ---- Header ----
+  const hour = new Date().getHours();
+  document.getElementById('greeting').textContent =
+    hour < 12 ? "Let's plan a good morning." : hour < 18 ? "Let's shape the afternoon." : "Let's ease into evening.";
+  const dateLineEl = document.getElementById('dateLine');
+
+  function updateDateLine(){
+    const opts = { weekday:'long', month:'long', day:'numeric' };
+    dateLineEl.textContent = selectedDate.getTime() === today.getTime()
+      ? `Today — ${selectedDate.toLocaleDateString(undefined, opts)}`
+      : selectedDate.toLocaleDateString(undefined, opts);
+  }
+
+  // ---- Week strip ----
+  const weekStripEl = document.getElementById('weekStrip');
+  function buildWeekStrip(){
+    weekStripEl.innerHTML = '';
+    const start = new Date(today);
+    start.setDate(start.getDate() - start.getDay()); // Sunday start
+    for(let i=0;i<7;i++){
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const key = dateKey(d);
+      const pill = document.createElement('div');
+      pill.className = 'day-pill';
+      if(d.getTime() === today.getTime()) pill.classList.add('is-today');
+      if(d.getTime() === selectedDate.getTime()) pill.classList.add('selected');
+      if(store[key] && store[key].length) pill.classList.add('has-tasks');
+      pill.innerHTML = `
+        <div class="dow">${d.toLocaleDateString(undefined,{weekday:'short'}).slice(0,2)}</div>
+        <div class="dom">${d.getDate()}</div>
+        <div class="dot"></div>`;
+      pill.addEventListener('click', () => {
+        selectedDate = d;
+        updateDateLine();
+        buildWeekStrip();
+        renderTimeline();
+        renderUpNext();
+      });
+      weekStripEl.appendChild(pill);
+    }
+  }
+
+  // ---- Add task controls ----
+  let selectedCat = 'Focus';
+  document.getElementById('catRow').addEventListener('click', e => {
+    const btn = e.target.closest('.cat-btn');
+    if(!btn) return;
+    document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedCat = btn.dataset.cat;
+  });
+
+  const durationSlider = document.getElementById('durationSlider');
+  const durationOut = document.getElementById('durationOut');
+  durationSlider.addEventListener('input', () => {
+    const v = +durationSlider.value;
+    durationOut.textContent = v < 60 ? `${v} min` : (v % 60 === 0 ? `${v/60} hr` : `${Math.floor(v/60)}h ${v%60}m`);
+  });
+
+  const energySlider = document.getElementById('energySlider');
+  const energyOut = document.getElementById('energyOut');
+  const energyLabels = {1:'Very low',2:'Low',3:'Medium',4:'High',5:'Peak focus'};
+  energySlider.addEventListener('input', () => { energyOut.textContent = energyLabels[energySlider.value]; });
+
+  const taskTitleInput = document.getElementById('taskTitle');
+  const taskStartInput = document.getElementById('taskStart');
+  taskStartInput.value = `${pad(new Date().getHours())}:00`;
+
+  document.getElementById('addBtn').addEventListener('click', () => {
+    const title = taskTitleInput.value.trim();
+    if(!title || !taskStartInput.value) { taskTitleInput.focus(); return; }
+    const key = dateKey(selectedDate);
+    if(!store[key]) store[key] = [];
+    store[key].push({
+      id:id(), title, cat:selectedCat, start:taskStartInput.value,
+      duration:+durationSlider.value, energy:+energySlider.value, done:false
+    });
+    taskTitleInput.value = '';
+    buildWeekStrip();
+    renderTimeline();
+    renderUpNext();
+  });
+  taskTitleInput.addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('addBtn').click(); });
+
+  // ---- Timeline ----
+  const timelineHost = document.getElementById('timelineHost');
+
+  function renderTimeline(){
+    const key = dateKey(selectedDate);
+    const tasks = (store[key] || []).slice().sort((a,b)=> timeToMinutes(a.start)-timeToMinutes(b.start));
+
+    if(tasks.length === 0){
+      timelineHost.innerHTML = `<div class="empty-timeline"><div class="glyph">a blank page, waiting</div></div>`;
+      return;
+    }
+
+    let hoursHtml = '';
+    for(let h=DAY_START; h<=DAY_END; h++){
+      const label = h===12 ? '12 PM' : h===0||h===24 ? '12 AM' : h>12 ? `${h-12} PM` : `${h} AM`;
+      hoursHtml += `<div class="hour-row" style="height:${60*PX_PER_MIN}px"><div class="hour-label">${label}</div></div>`;
+    }
+
+    let blocksHtml = '';
+    tasks.forEach(t => {
+      const startMin = timeToMinutes(t.start) - DAY_START*60;
+      const top = Math.max(0, startMin) * PX_PER_MIN;
+      const height = Math.max(t.duration * PX_PER_MIN, 44);
+      const endLabel = minutesToLabel(timeToMinutes(t.start) + t.duration);
+      const dots = Array.from({length:5}, (_,i) => `<span class="${i < t.energy ? 'filled':''}"></span>`).join('');
+      blocksHtml += `
+        <div class="block cat-${t.cat} ${t.done?'done':''}" data-id="${t.id}" style="top:${top}px; height:${height}px;">
+          <div class="block-top">
+            <div>
+              <div class="block-title">${escapeHtml(t.title)}</div>
+              <div class="block-time">${minutesToLabel(timeToMinutes(t.start))} – ${endLabel}</div>
+              <div class="energy-dots">${dots}</div>
+            </div>
+            <div class="block-actions">
+              <button class="mini-btn check" data-action="toggle" title="Mark done">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>
+              <button class="mini-btn del" data-action="delete" title="Remove">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>`;
+    });
+
+    // now-line, only for today
+    let nowLineHtml = '';
+    if(selectedDate.getTime() === today.getTime()){
+      const now = new Date();
+      const nowMin = now.getHours()*60 + now.getMinutes() - DAY_START*60;
+      if(nowMin >= 0 && nowMin <= totalMinutes){
+        const top = nowMin * PX_PER_MIN;
+        nowLineHtml = `<div class="now-line" style="top:${top}px;"><span class="now-time">${minutesToLabel(now.getHours()*60+now.getMinutes())}</span></div>`;
+      }
+    }
+
+    timelineHost.innerHTML = `
+      <div class="timeline" style="height:${totalMinutes*PX_PER_MIN}px;">
+        ${hoursHtml}
+        ${blocksHtml}
+        ${nowLineHtml}
+      </div>`;
+  }
+
+  function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+  timelineHost.addEventListener('click', e => {
+    const blockEl = e.target.closest('.block');
+    if(!blockEl) return;
+    const action = e.target.closest('[data-action]')?.dataset.action;
+    if(!action) return;
+    const key = dateKey(selectedDate);
+    const list = store[key] || [];
+    const idx = list.findIndex(t => t.id === blockEl.dataset.id);
+    if(idx === -1) return;
+    if(action === 'toggle') list[idx].done = !list[idx].done;
+    if(action === 'delete') list.splice(idx,1);
+    renderTimeline();
+    renderUpNext();
+    buildWeekStrip();
+  });
+
+  // ---- Up next banner (live, based on real clock, today only) ----
+  const upNextEl = document.getElementById('upNext');
+  const upNextLabel = document.getElementById('upNextLabel');
+  const upNextTitle = document.getElementById('upNextTitle');
+  const upNextTime = document.getElementById('upNextTime');
+
+  function renderUpNext(){
+    if(selectedDate.getTime() !== today.getTime()){
+      upNextEl.style.display = 'none';
+      return;
+    }
+    const key = dateKey(today);
+    const tasks = (store[key] || []).filter(t=>!t.done).slice().sort((a,b)=>timeToMinutes(a.start)-timeToMinutes(b.start));
+    const nowMin = new Date().getHours()*60 + new Date().getMinutes();
+
+    let current = null, next = null;
+    for(const t of tasks){
+      const s = timeToMinutes(t.start), e = s + t.duration;
+      if(nowMin >= s && nowMin < e){ current = t; break; }
+    }
+    if(!current){
+      next = tasks.find(t => timeToMinutes(t.start) > nowMin);
+    }
+
+    if(current){
+      upNextEl.style.display = 'flex';
+      upNextLabel.textContent = 'Happening now';
+      upNextTitle.textContent = current.title;
+      upNextTime.textContent = `Until ${minutesToLabel(timeToMinutes(current.start)+current.duration)}`;
+    } else if(next){
+      upNextEl.style.display = 'flex';
+      upNextLabel.textContent = 'Up next';
+      upNextTitle.textContent = next.title;
+      upNextTime.textContent = `Starts at ${minutesToLabel(timeToMinutes(next.start))}`;
+    } else {
+      upNextEl.style.display = 'flex';
+      upNextLabel.textContent = 'All set';
+      upNextTitle.textContent = tasks.length === 0 && (store[key]||[]).length > 0 ? 'Everything is done for today' : 'Nothing left scheduled';
+      upNextTime.textContent = 'Enjoy the rest of your day';
+    }
+  }
+
+  // ---- Mood slider ----
+  const moodSlider = document.getElementById('moodSlider');
+  const moodEmoji = document.getElementById('moodEmoji');
+  const moods = {1:'😔',2:'😕',3:'😌',4:'🙂',5:'😄'};
+  moodSlider.addEventListener('input', () => { moodEmoji.textContent = moods[moodSlider.value]; });
+
+  // ---- init ----
+  updateDateLine();
+  buildWeekStrip();
+  renderTimeline();
+  renderUpNext();
+
+  // live refresh every 30s so the now-line & up-next stay current
+  setInterval(() => {
+    if(selectedDate.getTime() === today.getTime()){
+      renderTimeline();
+      renderUpNext();
+    }
+  }, 30000);
+})();
+</script>
+
+</body>
+</html>
